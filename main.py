@@ -6,23 +6,23 @@ from datetime import datetime
 import logging
 
 
-def makeDir(folderName):
+def make_dir(folder_name):
     # Get the current date and time
     now = datetime.now()
     # Format the date and time as a string
-    dateTime = now.strftime("%Y-%m-%d-%H%M%S")
+    date_time = now.strftime("%Y-%m-%d-%H%M%S")
     # Check if the "attachments" directory exists
-    if not os.path.isdir(folderName):
+    if not os.path.isdir(folder_name):
     # Create the "attachments" directory if it does not exist
-        os.makedirs(folderName)
+        os.makedirs(folder_name)
     
     # Create the "attachments_dateTime" directory
-    os.chdir(folderName)
-    attachFolderName = folderName+ " - " +dateTime
-    os.makedirs(attachFolderName)
-    return attachFolderName
+    os.chdir(folder_name)
+    attachment_folder_name = folder_name+ " - " +date_time
+    os.makedirs(attachment_folder_name)
+    return attachment_folder_name
 
-def checkExtractMode(sysArgv,prompt):
+def check_extract_mode(sysArgv,prompt):
     """
     Prompts user for the path to the file or  the directory
     """
@@ -37,7 +37,7 @@ def checkExtractMode(sysArgv,prompt):
         else:
             return path
 
-def sanitizeName(name):
+def sanitize_name(name):
     """
     This function removes invalid characters from the given file name and prints the attachment name
     """
@@ -52,43 +52,43 @@ def sanitizeName(name):
     print(f"\t\t{name}")
     return name
 
-def processEml(filePath,attachFolderName,folderPath):
+def process_eml(file_path,attachment_folder_name,folder_path):
     """
     This function processes a single EML file and saves any attachments found
     """
     # Initialize the counter variables
-    attachmentCount = 0
-    savedCount = 0
+    attachment_count = 0
+    attachment_saved_count = 0
     # Get the full file name including extension
-    fullFileName= os.path.basename(filePath)
+    full_file_name= os.path.basename(file_path)
     # Get just the file name
-    fileName=fullFileName.split('.')[0]
+    file_name=full_file_name.split('.')[0]
     # Open the .eml file
     try:
-        with open(filePath, 'r') as fp:
+        with open(file_path, 'r') as fp:
             msg = email.message_from_file(fp)
     except PermissionError:
-        logging.error(f"Error: {str(e)} - {filePath} Permission denied.\n")
-        print(f'Permission Error on {fullFileName}')
+        logging.error(f"Error: {str(e)} - {file_path} Permission denied.\n")
+        print(f'Permission Error on {full_file_name}')
     except FileNotFoundError:
-        logging.error(f"Error: {str(e)} - {fullFileName} not found in {filePath}\n")
+        logging.error(f"Error: {str(e)} - {full_file_name} not found in {file_path}\n")
     except Exception as e:
-        logging.error(f"Error: {str(e)} - {filePath} , {fullFileName}\n")
-        print(f'An error occurred while opening {fullFileName}: {str(e)}')
+        logging.error(f"Error: {str(e)} - {file_path} , {full_file_name}\n")
+        print(f'An error occurred while opening {full_file_name}: {str(e)}')
     # Get the full directory of the .eml file
-    emlDir = os.path.dirname(filePath)
-    if folderPath:
-        # Creates a corresponding directory that is inside of the folderPath in the "attachments" folder
-        saveDir = os.path.join(attachFolderName, emlDir[len(folderPath)+1:])
-        if not os.path.isdir(saveDir):
-            os.makedirs(saveDir)
+    eml_dir = os.path.dirname(file_path)
+    if folder_path:
+        # Creates a corresponding directory that is inside of the folder_path in the "attachments" folder
+        save_dir = os.path.join(attachment_folder_name, eml_dir[len(folder_path)+1:])
+        if not os.path.isdir(save_dir):
+            os.makedirs(save_dir)
         # Create a subdirectory within the corresponding directory for the .eml file
-        fileSaveDir = os.path.join(saveDir, fileName)
+        file_save_dir = os.path.join(save_dir, file_name)
     else:
-        fileSaveDir = os.path.join(attachFolderName,fileName)
-    if not os.path.isdir(fileSaveDir):
-        os.makedirs(fileSaveDir)
-    print(f'{fullFileName} -\n\tAttachement -')
+        file_save_dir = os.path.join(attachment_folder_name,file_name)
+    if not os.path.isdir(file_save_dir):
+        os.makedirs(file_save_dir)
+    print(f'{full_file_name} -\n\tAttachement -')
     # Iterate over all the attachments in the message
     for part in msg.walk():
         # If the attachment is a file, save it to the specified directory
@@ -97,83 +97,82 @@ def processEml(filePath,attachFolderName,folderPath):
         # Get the file header and Skips the attachment if it does not have a file header
         if part.get('Content-Disposition') is None:
             continue
-        attachmentName = part.get_filename()
-        if attachmentName is None:
+        attachment_name = part.get_file_name()
+        if attachment_name is None:
             continue
-        attachmentName=str(attachmentName)
-        attachmentCount += 1
-        attachmentName = sanitizeName(attachmentName)
-        filePath = os.path.join(fileSaveDir, attachmentName)
-        # print(f"{fileSaveDir}\{attachmentName}")
+        attachment_name=str(attachment_name)
+        attachment_count += 1
+        attachment_name = sanitize_name(attachment_name)
+        file_path = os.path.join(file_save_dir, attachment_name)
         try:
-            with open(filePath, 'wb') as f:
+            with open(file_path, 'wb') as f:
                 f.write(part.get_payload(decode=True))
-            savedCount += 1
+            attachment_saved_count += 1
             # Print the number of attachments found and saved in particular folder
         except Exception as e:
-            logging.error(f"'{attachmentName}' of '{fileName}' couldn't be saved :\n{e}")
+            logging.error(f"'{attachment_name}' of '{file_name}' couldn't be saved :\n{e}")
             continue
-    print(f'Found : {attachmentCount}\nSaved : {savedCount}\n')
-    return (attachmentCount,savedCount)
+    print(f'Found : {attachment_count}\nSaved : {attachment_saved_count}\n')
+    return (attachment_count,attachment_saved_count)
 
 
-def processBatchEml(folderPath, attachFolderName):
-    totalAttachmentCount = 0
-    totalSavedCount = 0
+def process_batch_eml(folder_path, attachment_folder_name):
+    total_attachment_count = 0
+    total_attachment_saved_count = 0
     try:
         # Iterate over all the subdirectories in the folder tree
-        for root,dirs,files in os.walk(folderPath):
+        for root,dirs,files in os.walk(folder_path):
             # Iterate over the files in the current directory
-            for fileName in files:
+            for file_name in files:
                 # Check if the file is an .eml file
-                if os.path.splitext(fileName)[1] == '.eml':
-                    filePath= os.path.join(root,fileName)
-                    attachmentCount, savedCount = processEml(filePath,attachFolderName,folderPath)
+                if os.path.splitext(file_name)[1] == '.eml':
+                    file_path= os.path.join(root,file_name)
+                    attachment_count, attachment_saved_count = process_eml(file_path,attachment_folder_name,folder_path)
                     # Increment the total attachment and saved count
-                    totalAttachmentCount += attachmentCount
-                    totalSavedCount += savedCount
+                    total_attachment_count += attachment_count
+                    total_attachment_saved_count += attachment_saved_count
                 else:
                     continue
     except Exception as e:
-        logging.error(f"Error: {str(e)} - {fileName}\n")
+        logging.error(f"Error: {str(e)} - {file_name}\n")
         print("Error occured.Please check log.")
-    return totalAttachmentCount,totalSavedCount
+    return total_attachment_count,total_attachment_saved_count
 
 
 if __name__=="__main__":
     # configure logging settings
-    logging.basicConfig(filename="attachment.log",level=logging.ERROR, format='%(asctime)s %(levelname)s: %(message)s')
+    logging.basicConfig(file_name="attachment.log",level=logging.ERROR, format='%(asctime)s %(levelname)s: %(message)s')
 
-    totalAttachmentCount = 0
-    totalSavedCount = 0
+    total_attachment_count = 0
+    total_attachment_saved_count = 0
 
     # Get the folder path from the command line arguments
     if len(sys.argv) > 1:
-        extractMode = sys.argv[1].strip("-").lower()
+        extract_mode = sys.argv[1].strip("-").lower()
         # Check extract mode
-        if extractMode in ["s","b"]:
+        if extract_mode in ["s","b"]:
             print("\n\tEML Extractor\n")
-            if extractMode == "s":
+            if extract_mode == "s":
                 if len(sys.argv) < 3:
-                    filePath = checkExtractMode(None, "Please Enter File Path: ")
+                    file_path = check_extract_mode(None, "Please Enter File Path: ")
                 else:
-                    filePath = checkExtractMode(sys.argv[2].strip('"'), "Please Enter File Path: ")
-                while(os.path.isfile(filePath) == False):
-                    filePath = input("A directory path was provided instead of a file path. Please enter File Path: ").strip('"')
-                attachFolderName = makeDir('attachment')
+                    file_path = check_extract_mode(sys.argv[2].strip('"'), "Please Enter File Path: ")
+                while(os.path.isfile(file_path) == False):
+                    file_path = input("A directory path was provided instead of a file path. Please enter File Path: ").strip('"')
+                attachment_folder_name = make_dir('attachment')
                 print("\n")
-                totalAttachmentCount, totalSavedCount = processEml(filePath, attachFolderName,None)
+                total_attachment_count, total_attachment_saved_count = process_eml(file_path, attachment_folder_name,None)
             
             else:
                 if len(sys.argv) < 3:
-                    folderPath = checkExtractMode(None, "Please Enter Folder Path:")
+                    folder_path = check_extract_mode(None, "Please Enter Folder Path:")
                 else:
-                    folderPath = checkExtractMode(sys.argv[2].strip('"'), "Please Enter Folder Path: ")
-                while(os.path.isfile(folderPath) == True):
-                    folderPath = input("A file path was provided instead of a folder path. Please enter Folder Path: ").strip('"')
-                attachFolderName = makeDir('attachment')
+                    folder_path = check_extract_mode(sys.argv[2].strip('"'), "Please Enter Folder Path: ")
+                while(os.path.isfile(folder_path) == True):
+                    folder_path = input("A file path was provided instead of a folder path. Please enter Folder Path: ").strip('"')
+                attachment_folder_name = make_dir('attachment')
                 print("\n")
-                totalAttachmentCount, totalSavedCount = processBatchEml(folderPath,attachFolderName)
+                total_attachment_count, total_attachment_saved_count = process_batch_eml(folder_path,attachment_folder_name)
         else:
             print("\nDid you mean -s or -b instead?\n")
 
@@ -183,26 +182,26 @@ if __name__=="__main__":
         print("1. Single EML\n2. Bulk EML")
         while True:
             try:
-                extractMode = int(input("\nChoose '1' or '2': "))
-                if extractMode in (1,2):
+                extract_mode = int(input("\nChoose '1' or '2': "))
+                if extract_mode in (1,2):
                     break
             except ValueError:
                 pass
             print("Invalid Input.")
-    if extractMode == 1:
-        filePath = checkExtractMode(None,"\nFile Path: ")
-        while(os.path.isfile(filePath) == False):
-            filePath = input("A directory path was provided instead of a file path. Please enter File Path: ").strip('"')
-        attachFolderName = makeDir('attachment')
+    if extract_mode == 1:
+        file_path = check_extract_mode(None,"\nFile Path: ")
+        while(os.path.isfile(file_path) == False):
+            file_path = input("A directory path was provided instead of a file path. Please enter File Path: ").strip('"')
+        attachment_folder_name = make_dir('attachment')
         print("\n")
-        totalAttachmentCount, totalSavedCount = processEml(filePath, attachFolderName,None)
-    elif extractMode == 2:
-        folderPath = checkExtractMode(None,"\nFolder Path: ")
-        while(os.path.isfile(folderPath) == True):
-            folderPath = input("A file path was provided instead of a folder path. Please enter Folder Path: ").strip('"')
-        attachFolderName = makeDir('attachment')
+        total_attachment_count, total_attachment_saved_count = process_eml(file_path, attachment_folder_name,None)
+    elif extract_mode == 2:
+        folder_path = check_extract_mode(None,"\nFolder Path: ")
+        while(os.path.isfile(folder_path) == True):
+            folder_path = input("A file path was provided instead of a folder path. Please enter Folder Path: ").strip('"')
+        attachment_folder_name = make_dir('attachment')
         print("\n")
-        totalAttachmentCount, totalSavedCount = processBatchEml(folderPath,attachFolderName)
+        total_attachment_count, total_attachment_saved_count = process_batch_eml(folder_path,attachment_folder_name)
     # Print the total number of attachments found and saved
-    if totalSavedCount and totalSavedCount: 
-        print(f'\nTotal : {totalAttachmentCount} attachments\nSaved : {totalSavedCount} attachments\n')
+    if total_attachment_saved_count and total_attachment_saved_count: 
+        print(f'\nTotal : {total_attachment_count} attachments\nSaved : {total_attachment_saved_count} attachments\n')
