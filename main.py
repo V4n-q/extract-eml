@@ -97,7 +97,7 @@ def process_eml(file_path,attachment_folder_name,folder_path):
         # Get the file header and Skips the attachment if it does not have a file header
         if part.get('Content-Disposition') is None:
             continue
-        attachment_name = part.get_file_name()
+        attachment_name = part.get_filename()
         if attachment_name is None:
             continue
         attachment_name=str(attachment_name)
@@ -141,7 +141,7 @@ def process_batch_eml(folder_path, attachment_folder_name):
 
 if __name__=="__main__":
     # configure logging settings
-    logging.basicConfig(file_name="attachment.log",level=logging.ERROR, format='%(asctime)s %(levelname)s: %(message)s')
+    logging.basicConfig(filename="attachment.log",level=logging.ERROR, format='%(asctime)s %(levelname)s: %(message)s')
 
     total_attachment_count = 0
     total_attachment_saved_count = 0
